@@ -785,7 +785,10 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
                 filename = sour.split('/')[-1].split('.')[0]
                 for sub in sub_type:
                     if os.path.exists(path_old + '/' + filename + sub):  # 字幕移动
-                        shutil.move(path_old + '/' + filename + sub, des_path + '/' + filename + sub)
+                        if self.Ui.radioButton_soft_on.isChecked():
+                            shutil.copy(path_old + '/' + filename + sub, des_path + '/' + filename + sub) #软链接模式下移动改成复制
+                        else:
+                            shutil.move(path_old + '/' + filename + sub, des_path + '/' + filename + sub) 
                         self.add_text_main('   [+]Sub moved! ' + filename + sub)
             except Exception as error_info:
                 self.add_text_main('[-]Error in move_file_thread: ' + str(error_info))
@@ -1189,7 +1192,9 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
                 if leak == 1:
                     print("  <tag>流出</tag>", file=code)
                 if cn_sub == 1:
-                    print("  <tag>中文字幕</tag>", file=code)
+                    print("  <tag>内嵌字幕</tag>", file=code)
+                if cn_sub == 2:
+                    print("  <tag>外挂字幕</tag>", file=code)
                 if series != 'unknown':
                     print("  <tag>" + '系列:' + series + "</tag>", file=code)
                 if studio != 'unknown':
@@ -1207,7 +1212,9 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
                 if leak == 1:
                     print("  <genre>流出</genre>", file=code)
                 if cn_sub == 1:
-                    print("  <genre>中文字幕</genre>", file=code)
+                    print("  <genre>内嵌字幕</genre>", file=code)
+                if cn_sub == 2:
+                    print("  <genre>外挂字幕</genre>", file=code)
                 if series != 'unknown':
                     print("  <genre>" + '系列:' + series + "</genre>", file=code)
                 if studio != 'unknown':
@@ -1255,7 +1262,10 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
             sub_type = self.Ui.lineEdit_sub_type.text().split('|')
             for sub in sub_type:
                 if os.path.exists(path_old + '/' + filename + sub):  # 字幕移动
-                    shutil.move(path_old + '/' + filename + sub, path + '/' + naming_rule + sub)
+                    if self.Ui.radioButton_soft_on.isChecked():
+                        shutil.copy(path_old + '/' + filename + sub, path + '/' + naming_rule + sub)  #软链接模式下复制
+                    else:
+                        shutil.move(path_old + '/' + filename + sub, path + '/' + naming_rule + sub)  #非软链接模式下移动
                     self.add_text_main('[+]Sub moved!         ' + naming_rule + sub)
                     return True
         except FileExistsError:
@@ -1305,8 +1315,10 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
     # ========================================================================加水印
     def add_mark(self, poster_path, thumb_path, cn_sub, leak, uncensored, config):
         mark_type = ''
-        if self.Ui.checkBox_sub.isChecked() and cn_sub:
-            mark_type += ',字幕'
+        if self.Ui.checkBox_sub.isChecked() and cn_sub==1:
+            mark_type += ',内嵌字幕'
+        if self.Ui.checkBox_sub.isChecked() and cn_sub==2:
+            mark_type += ',外挂字幕'
         if self.Ui.checkBox_leak.isChecked() and leak:
             mark_type += ',流出'
         if self.Ui.checkBox_uncensored.isChecked() and uncensored:
@@ -1333,6 +1345,10 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
         if self.Ui.checkBox_sub.isChecked() and cn_sub == 1:
             self.add_to_pic(pic_path, img_pic, size, count, 1)  # 添加
             count = (count + 1) % 4
+        # 外挂字幕
+        if self.Ui.checkBox_sub.isChecked() and cn_sub == 2:   #外挂字幕
+            self.add_to_pic(pic_path, img_pic, size, count, 4)  # 添加
+            count = (count + 1) % 4
         if self.Ui.checkBox_leak.isChecked() and leak == 1:
             self.add_to_pic(pic_path, img_pic, size, count, 2)
             count = (count + 1) % 4
@@ -1348,6 +1364,8 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
             mark_pic_path = 'Img/LEAK.png'
         elif mode == 3:
             mark_pic_path = 'Img/UNCENSORED.png'
+        elif mode == 4:   #外挂字幕
+            mark_pic_path = 'Img/EXTSUB.png'
         img_subt = Image.open(mark_pic_path)
         scroll_high = int(img_pic.height / size)
         scroll_wide = int(scroll_high * img_subt.width / img_subt.height)
@@ -1579,7 +1597,7 @@ class MyMAinWindow(QMainWindow, Ui_AVDV):
                 self.copyRenameJpgToFanart(path, naming_rule)
             self.deletethumb(path, naming_rule)
             if self.pasteFileToFolder(filepath, path, naming_rule, failed_folder):  # 移动文件,True 为有外挂字幕
-                cn_sub = 1
+                cn_sub = 2  # cn_sub为2，为外挂字幕
             if self.Ui.checkBox_download_nfo.isChecked():
                 self.PrintFiles(path, naming_rule, cn_sub, leak, json_data, filepath, failed_folder)  # 打印文件
             if self.Ui.radioButton_extrafanart_download_on.isChecked():
